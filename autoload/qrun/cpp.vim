@@ -1,24 +1,24 @@
 
+let s:origin_path = $PATH
 " Check the environtment {{{
 if has('win32')
-    " Set the environtment variable INCLUDE LIB PATH
-    fun! qrun#cpp#setenvs(...)
-        let arch = a:0 ? a:1 : 0
-        if empty(arch)
-            let arch = has('win64') ? 'x64': 'x86'
-        endif
-        if exists('g:envs#vs')
-            let conf = get(g:envs#vs, arch)
+    let g:qrun#msvc#config = g:envs#vs
+    let s:current_arch = ''
+    " echo 'Can not found environtments of visual studio'
+    " echo 'You can generate it by "gen_envs.py"'
+
+    fun! qrun#cpp#switch_arch(arch)
+        call assert_true(exists('g:qrun#msvc#config'))
+        if s:current_arch != a:arch
+            let conf = get(g:qrun#msvc#config, a:arch)
             if empty(conf)
-                echo 'No this arch' arch | return
+                echom 'No this arch' arch | return
             endif
             let $INCLUDE = join(conf.INCLUDE, ';')
             let $LIB = join(conf.LIB, ';')
-            let $PATH = s:merge_path($PATH, conf.PATH)
-            echo "Loaded the environtments of visual studio"
-        else
-            echo 'Can not found environtments of visual studio'
-            echo 'You can generate it by "gen_envs.py"'
+            let $PATH = s:merge_path(s:origin_path, conf.PATH)
+            echo "qrun#cpp#compile: switch to " a:arch
+            let s:current_arch = a:arch
         endif
     endf
 
@@ -36,24 +36,25 @@ if has('win32')
         return join(p1, deli)
     endf
 
-    call qrun#cpp#setenvs()
+    call qrun#cpp#switch_arch(has('win64') ? 'x64': 'x86')
 endif " }}}
 
 " Check compiler {{{
 if has('win32') && executable('cl')
     fun! s:compile(s, o)
         let obj = fnamemodify(a:o, ':p:r')
-        return qrun#compile(['cl', a:s, '/Fe:', a:o, '/Fo:', obj, '/Fd:', obj, '/Zi'])
+        " return qrun#compile(['cl', a:s, '/Fe:', a:o, '/Fo:', obj, '/Fd:', obj, '/Zi'])
+        return qrun#compile(['cl', a:s, '/Fe:', a:o, '/Fo:', obj])
     endf
     compiler msvc
 elseif executable('g++')
     fun! s:compile(s, o)
-        return qrun#compile(['g++', '-std=c++11', s, '-o', o])
+        return qrun#compile(['g++', '-std=c++11', a:s, '-o', a:o])
     endf
     compiler gcc
 elseif executable('clang++')
     fun! s:compile(s, o)
-        return qrun#compile(['clang++', '-std=c++11', s, '-o', o])
+        return qrun#compile(['clang++', '-std=c++11', a:s, '-o', a:o])
     endf
     compiler gcc
 else

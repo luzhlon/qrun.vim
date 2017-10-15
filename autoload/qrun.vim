@@ -79,9 +79,11 @@ else
         let g:qrun#new_term_format = 'cmd.exe /c start bash %s'
     else                            " Else unix environment
         if executable('gnome-terminal')
-            let g:qrun#new_term_format = "gnome-terminal --display=$DISPLAY -e 'base %s'"
+            let g:qrun#new_term_format = "gnome-terminal --display=$DISPLAY -e 'bash %s'"
+        elseif executable('deepin-terminal')
+            let g:qrun#new_term_format = "deepin-terminal -e bash %s >& /dev/null &"
         else
-            let g:qrun#new_term_format = ''
+            echoerr 'Can not find a valid terminal'
         endif
     endif
 
@@ -128,7 +130,13 @@ fun! qrun#exec(opt)
     if !exists('g:qrun#new_term_format')
         echom 'Can not open a new terminal, please set the g:qrun#new_term_format'
     else
-        sil! exe '!' printf(g:qrun#new_term_format, tempfile)
+        let cmd = printf(g:qrun#new_term_format, shellescape(tempfile))
+        " echo g:cmd getchar()
+        if has('win32')
+            exe 'sil! !' cmd
+        else
+            call system(cmd)
+        endif
     endif
 endf
 " }}}

@@ -7,9 +7,10 @@ if empty(s:fasm_path)
 endif
 
 let s:inc_path = fnamemodify(s:fasm_path, ':h') . '/INCLUDE'
-if !isdirectory(s:inc_path)
-    echom 'Not found include path for fasm'
-    finish
+if isdirectory(s:inc_path)
+    let $INCLUDE .= (has('win32') ? ';': ':') . s:inc_path
+else
+    echom 'Not found include path for fasm' | finish
 endif
 
 fun! qrun#fasm#init()
@@ -17,11 +18,8 @@ fun! qrun#fasm#init()
 endf
 
 fun! qrun#fasm#compile(source, target)
-    let orgin_inc = $INCLUDE
-    let $INCLUDE = s:inc_path
     " Build && run
     call qrun#compile(['fasm', a:source, a:target])
-    let $INCLUDE = orgin_inc
 endf
 
 fun! qrun#fasm#run()

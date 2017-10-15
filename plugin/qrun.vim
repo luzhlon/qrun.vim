@@ -32,9 +32,9 @@ endf
 
 fun! s:Target(...)
     if a:0 && !empty(a:1)
-        call qrun#bufvar('bin', a:1)
+        call qrun#bufvar('target', a:1)
         echo a:1
     else
-        echo qrun#bufvar('bin')
+        echo qrun#bufvar('target')
     endif
 endf
