@@ -1,0 +1,51 @@
+*qrun.txt*	Nvim or Vim8.x
+
+the option -- `b:qrun` is a dictionary, records some infos about how to run the file;
+
+if the option contains the 'target' field and the target is older then current file,
+qrun will call qrun#{&ft}#compile() first, then call the qrun#{&ft}#run();
+
+else qrun call qrun#{&ft}#run() directly.
+
+Usage~
+
+Add a keymapping 
+
+    nmap <F5> :call qrun#()<cr>
+
+Interface~
+
+- qrun#exec(option) 运行程序，可设置标准输入/输出
+  option可以是字符串或者字典；如果option是一个字典，
+  - 'cmd'    所要执行的程序的命令行
+  - 'target' 所要执行的程序(如果设置了cmd，此项无效)
+  - 'stdin'  标准输入文件
+  - 'stdout' 标准输出文件
+  - 'pause'  执行完程序后是否暂停，默认为1
+  - 'cwd'    当前工作目录
+  |b:qrun|就是一个qrun#exec的option
+- qrun#compile(shell_cmd) 异步编译程序，在quickfix中输出
+  shell_cmd可以是字符串或者列表
+- qrun#tempfile(suffix) 获取临时文件名，suffix为后缀
+- qrun#open(file) 调用对应的程序打开文件
+
+
+Write a source~
+
+xxx is the file type.
+
+qrun#xxx#init()
+  - 第一次在当前buffer中使用qrun时调用，用于初始化和当前buffer相关的数据，一般的脚本`let b:qrun = {}`
+  - 对于需要编译的 `let b:qrun = {'target': qrun#tempfile('.exe')}`
+  - 必须要设置b:qrun变量为一个字典
+
+qrun#xxx#compile(source, target)
+  - 用于运行程序时，对于需要编译的回调用此函数。source为源文件，target为目标文件
+  - 只有当b:qrun中包含'target'并且当前buffer的文件比target新时才会调用
+
+qrun#xxx#run()
+  - 运行目标时调用，一般的可执行程序 `return qrun#exec(b:qrun)`
+  - 脚本文件使用相应的解释器打开 `return qrun#exec(['python', expand('%')])`
+  - 其他的也需要根据b:qrun中的target来运行对应的程序
+
+vim:set et sw=4 ts=4 ft=help:
