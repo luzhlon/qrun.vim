@@ -67,7 +67,9 @@ if has('win32')
     let g:qrun#shell_script_ext = '.bat'
     
     fun! s:get_exec_script(cwd, cmd, pause)
-        let ret = ['cd ' . a:cwd, a:cmd]
+        let cwd = iconv(a:cwd, &enc, 'gbk')
+        " let ret = ['cd ' . cwd, a:cmd]
+        let ret = [a:cmd]
         if a:pause
             call add(ret, '@echo -------- returned %ERRORLEVEL% --------')
             call add(ret, 'pause')
@@ -117,15 +119,16 @@ fun! qrun#exec(opt)
     let cmd .= empty(stdin) ? '': ' < ' . shellescape(stdin)
     let cmd .= empty(stdout) ? '': ' > ' . shellescape(stdout)
 
-    let cmd = has('win32') ? iconv(cmd, 'utf8', 'gbk'): cmd
+    let cmd = has('win32') ? iconv(cmd, &enc, 'gbk'): cmd
 
     " Generate the shell script
-    let tempfile = tempname() . g:qrun#shell_script_ext
-    call writefile(s:get_exec_script(
-                \ get(opt, 'cwd', getcwd()),
-                \ cmd,
-                \ get(opt, 'pause', 1)),
-            \ tempfile)
+    let tempfile = qrun#tempfile(g:qrun#shell_script_ext)
+    call writefile(
+        \ s:get_exec_script(
+            \ get(opt, 'cwd', getcwd()),
+            \ cmd,
+            \ get(opt, 'pause', 1)),
+        \ tempfile)
     " Execute the script in a new terminal
     if !exists('g:qrun#new_term_format')
         echom 'Can not open a new terminal, please set the g:qrun#new_term_format'
@@ -152,8 +155,27 @@ endf " }}}
 fun! qrun#tempfile(...)
     let suffix = a:0 ? a:1 : ''
     let f = fnamemodify(tempname(), ':r') . suffix
-    return has('win32')? iconv(f, 'gbk', 'utf-8'): f
+    return has('win32')? iconv(f, 'gbk', &enc): f
 endf " }}}
+
+" Open a file {{{
+if has('win32')
+    let s:env = 'windows'
+elseif executable('cmd.exe')
+    let s:env = 'wsl'
+else
+    let s:env = 'unix'
+endif
+
+fun! qrun#open(file)
+    let f = shellescape(a:file)
+    if s:env == 'windows' || s:env == 'wsl'
+        sil exe '!rundll32.exe url.dll,FileProtocolHandler' f
+    else
+        sil exe '!xdg-open' f
+    endif
+endf
+" }}}
 
 fun! qrun#modeline()
     return matchstr(getline('$'), 'qrun\.vim:\s*\zs.*')
