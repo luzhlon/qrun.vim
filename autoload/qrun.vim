@@ -9,9 +9,10 @@ let s:path = expand('<sfile>:p:h')
 
 " Run current file by the file-type {{{
 fun! qrun#(...)
+    let ft = qrun#gettype()
     if !exists('b:qrun')
         try
-            call qrun#{&ft}#init()
+            call qrun#{ft}#init()
         catch /E117/
             echom 'No qrun extension for current filetype'
             return
@@ -23,9 +24,9 @@ fun! qrun#(...)
         let source = expand('%')
         let target = get(b:qrun, 'target')
         if !empty(target) && qrun#older(target, source)
-            call qrun#{&ft}#compile(source, target)
+            call qrun#{ft}#compile(source, target)
         else
-            return qrun#{&ft}#run()
+            return qrun#{ft}#run()
         endif
     catch /E117/
         echom 'No qrun extension for current filetype'
@@ -178,5 +179,10 @@ endf
 " }}}
 
 fun! qrun#modeline()
-    return matchstr(getline('$'), 'qrun\.vim:\s*\zs.*')
+    return matchstr(getline('$'), 'qrun\.vim\%(@\w\+\)\?:\s*\zs.*')
+endf
+
+fun! qrun#gettype()
+    let m = matchstr(getline('$'), 'qrun\.vim@\zs\w\+\ze:')
+    return empty(m) ? &ft: m
 endf
