@@ -14,12 +14,12 @@ else
     echom 'Can not found c++ compiler'
 endif " }}}
 
-fun! qrun#cpp#init()
+fun! qrun#objc#init()
     " Set the target
     let b:qrun = {'target': qrun#tempfile('.exe')}
 endf
 
-fun! qrun#cpp#compile(source, target)
+fun! qrun#objc#compile(source, target)
     if !exists('*s:compile')
         echom 'Can not found c++ compiler'
         return
@@ -27,6 +27,6 @@ fun! qrun#cpp#compile(source, target)
     return s:compile(a:source, a:target)
 endf
 
-fun! qrun#cpp#run()
+fun! qrun#objc#run()
     return qrun#exec(b:qrun)
 endf
