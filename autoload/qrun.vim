@@ -66,7 +66,7 @@ endf " }}}
 if has('win32')
     let g:qrun#new_term_format = 'start cmd /Q /c @call %s'
     let g:qrun#shell_script_ext = '.bat'
-    
+
     fun! s:get_exec_script(cwd, cmd, pause)
         let cwd = iconv(a:cwd, &enc, 'gbk')
         " let ret = ['cd ' . cwd, a:cmd]
@@ -133,6 +133,13 @@ fun! qrun#exec(opt)
     " Execute the script in a new terminal
     if !exists('g:qrun#new_term_format')
         echom 'Can not open a new terminal, please set the g:qrun#new_term_format'
+        if has('nvim') | winc s | endif
+        if has('win32')
+            exec 'terminal' 'cmd /Q /c @call' shellescape(tempfile)
+        else
+            exec 'terminal' 'bash' shellescape(tempfile)
+        endif
+        startinsert
     else
         let cmd = printf(g:qrun#new_term_format, shellescape(tempfile))
         " echo g:cmd getchar()
