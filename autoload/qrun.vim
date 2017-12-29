@@ -85,8 +85,6 @@ else
             let g:qrun#new_term_format = "gnome-terminal --display=$DISPLAY -e 'bash %s'"
         elseif executable('deepin-terminal')
             let g:qrun#new_term_format = "deepin-terminal -e bash %s >& /dev/null &"
-        else
-            echoerr 'Can not find a valid terminal'
         endif
     endif
 
@@ -108,6 +106,7 @@ endif
 "   cwd: current work directory
 "   pause: if pause after executed
 "   detach: detach from current terminal
+"   term: if use terminal builtin
 fun! qrun#exec(opt)
     let opt = type(a:opt) == v:t_dict ? a:opt: {'cmd': a:opt}
     let cmd = get(opt, 'cmd')
@@ -116,6 +115,10 @@ fun! qrun#exec(opt)
     " Build the command line
     let stdin = get(opt, 'stdin', 0)
     let stdout = get(opt, 'stdout', 0)
+    let useterm = get(opt, 'term', 0)
+    if !exists('g:qrun#new_term_format')
+        let useterm = 1
+    endif
 
     let cmd .= empty(stdin) ? '': ' < ' . shellescape(stdin)
     let cmd .= empty(stdout) ? '': ' > ' . shellescape(stdout)
@@ -130,18 +133,23 @@ fun! qrun#exec(opt)
             \ cmd,
             \ get(opt, 'pause', 1)),
         \ tempfile)
+    let tempfile = shellescape(tempfile)
     " Execute the script in a new terminal
-    if !exists('g:qrun#new_term_format')
-        echom 'Can not open a new terminal, please set the g:qrun#new_term_format'
+        " echom 'Can not open a new terminal, please set the g:qrun#new_term_format'
+    if useterm
+        if !exists(':terminal')
+            echo 'Current version is not supports :terminal command'
+            return
+        endif
         if has('nvim') | winc s | endif
         if has('win32')
-            exec 'terminal' 'cmd /Q /c @call' shellescape(tempfile)
+            exec 'terminal' 'cmd /Q /c @call' tempfile
         else
-            exec 'terminal' 'bash' shellescape(tempfile)
+            exec 'terminal' 'bash' tempfile
         endif
         startinsert
     else
-        let cmd = printf(g:qrun#new_term_format, shellescape(tempfile))
+        let cmd = printf(g:qrun#new_term_format, tempfile)
         " echo g:cmd getchar()
         if has('win32')
             exe 'sil! !' cmd
