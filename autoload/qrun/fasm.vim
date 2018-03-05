@@ -9,6 +9,7 @@ endif
 let s:inc_path = fnamemodify(s:fasm_path, ':h') . '/INCLUDE'
 if isdirectory(s:inc_path)
     let $INCLUDE .= (has('win32') ? ';': ':') . s:inc_path
+    call setbufvar(bufnr('%'), '&path', s:inc_path)
 else
     echom 'Not found include path for fasm' | finish
 endif
