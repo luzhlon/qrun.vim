@@ -2,10 +2,8 @@
 let s:origin_path = $PATH
 " Check the environtment {{{
 if has('win32')
-    let g:qrun#msvc#config = g:envs#vs
+    let g:qrun#msvc#config = env#get('msvc')
     let s:current_arch = ''
-    " echo 'Can not found environtments of visual studio'
-    " echo 'You can generate it by "gen_envs.py"'
 
     fun! qrun#cpp#switch_arch(arch)
         call assert_true(exists('g:qrun#msvc#config'))
@@ -67,11 +65,10 @@ fun! qrun#cpp#init()
 endf
 
 fun! qrun#cpp#compile(source, target)
-    if !exists('*s:compile')
-        echom 'Can not found c++ compiler'
-        return
+    if exists('*s:compile')
+        return s:compile(a:source, a:target)
     endif
-    return s:compile(a:source, a:target)
+    echom 'Can not found c++ compiler'
 endf
 
 fun! qrun#cpp#run()
