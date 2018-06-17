@@ -1,5 +1,5 @@
 
-let s:luajit_command = 'luajit'
+let s:luajit_command = 'luajit32'
 
 fun! qrun#luajit#init()
     let b:qrun = {}
@@ -9,8 +9,10 @@ fun! qrun#luajit#init()
 endf
 
 fun! qrun#luajit#run()
-    return qrun#exec(printf('%s %s',
-                \ s:luajit_command,
-                \ shellescape(expand('%:p')))
-            \ )
+    compiler! lua
+    if qrun#option('x64') || qrun#modeline() == 'x64'
+        let s:luajit_command = 'luajit64'
+    endif
+    call qrun#errun([s:luajit_command, expand('%:p')])
+    winc p
 endf

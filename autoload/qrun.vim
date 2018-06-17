@@ -45,7 +45,7 @@ fun! qrun#compile(cmd)
     endif
 
     let ft = &filetype
-    fun! OnExit(job, code) closure
+    fun! OnExit(job, code, stream) closure
         if a:code
             bel copen 8 | winc p
         else
@@ -56,13 +56,13 @@ fun! qrun#compile(cmd)
     cexpr ''
     " let cmd = type(a:1)==v:t_list? a:1 : join(a:000)
     let s:pid = job#start(a:cmd, {
-                \ 'onout' : 'job#cb_add2qfb',
-                \ 'onerr' : 'job#cb_add2qfb',
-                \ 'onexit': funcref('OnExit')
+                \ 'on_stdout' : 'callback#caddexpr',
+                \ 'on_stderr' : 'callback#caddexpr',
+                \ 'on_exit': funcref('OnExit')
                 \ })
 endf " }}}
 
-" Execute a shell command {{{
+" Execute a shell command in a external terminal {{{
 if has('win32')
     let g:qrun#new_term_format = 'start cmd /Q /c @call %s'
     let g:qrun#shell_script_ext = '.bat'
@@ -160,6 +160,46 @@ fun! qrun#exec(opt)
 endf
 " }}}
 
+" Execute cmdline in built-in terminal {{{
+fun! qrun#texec(cmd)
+    call term#open(a:cmd, {'on_stderr': function('callback#caddexpr')})
+endf " }}}
+
+" Execute cmdline and redirect it's stderr to quickfix {{{
+fun! qrun#errun(cmd)
+    let winqf = 0 | let winterm = 0
+    " Find a terminal or quickfix window
+    for i in range(1, winnr('$'))
+        let bt = getbufvar(winbufnr(i), '&bt')
+        if bt == 'quickfix'
+            let winqf = i
+        elseif bt == 'terminal'
+            let winterm = i
+        endif
+    endfo
+    if !winterm
+        if !winqf | copen | else
+            call win_gotoid(win_getid(winqf))
+        endif
+        call vim#split()
+    else
+        call win_gotoid(win_getid(winterm))
+        if !winqf
+            call vim#split('copen')
+            winc p
+        endif
+    endif
+
+    let cmd = type(a:cmd) == v:t_list ? a:cmd : [a:cmd]
+    let temp = tempname()
+    cexpr ''
+    call term#open(
+        \ ['cmd.exe', '/Q', '/c', '@call', s:path . '\error.bat', temp] + cmd,
+        \ {'on_exit': {j,d,s->vim#cfile(temp)}}
+        \ )
+    exe 'file' join(a:cmd)
+endf " }}}
+
 " Get/set buffer variable in the b:qrun {{{
 fun! qrun#bufvar(var, ...)
     if !exists('b:qrun') | let b:qrun = {} | endif
@@ -193,11 +233,43 @@ fun! qrun#open(file)
 endf
 " }}}
 
+fun! qrun#search(pat)
+    let result = ''
+    let cp = getcurpos()[1:2]
+    call cursor(nextnonblank(1), 1)
+    if search(a:pat, 'c', line('.') + 10)
+        let result = matchstr(getline('.'), a:pat)
+    else
+        call cursor(prevnonblank('$'), 1)
+        call cursor('.', col('$'))
+        if search(a:pat, 'bc', line('.') - 10)
+            let result = matchstr(getline('.'), a:pat)
+        endif
+    endif
+    call cursor(cp)
+    return result
+endf
+
 fun! qrun#modeline()
-    return matchstr(getline('$'), 'qrun\.vim\%(@\w\+\)\?:\s*\zs.*')
+    return qrun#search('qrun\.vim\%(@\w\+\)\?:\s*\zs.*')
 endf
 
 fun! qrun#gettype()
-    let m = matchstr(getline('$'), 'qrun\.vim@\zs\w\+\ze:')
+    if has_key(b:, 'qrun_type')
+        return b:qrun_type
+    endif
+    let m = qrun#search('qrun\.vim@\zs\w\+\ze:')
     return empty(m) ? &ft: m
+endf
+
+fun! qrun#option(opt, ...)
+    if !has_key(g:, 'qrun#options')
+        let g:qrun#options = env#get('qrun_options', {})
+    endif
+    if a:0
+        let g:qrun#options[a:opt] = a:1
+        call env#set('qrun_options', g:qrun#options)
+    else
+        return has_key(g:qrun#options, a:opt) ? g:qrun#options[a:opt]: 0
+    endif
 endf
