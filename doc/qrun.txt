@@ -10,9 +10,9 @@ else qrun call qrun#{&ft}#run() directly.
 Usage~
 
 Add a keymapping 
-
-    nmap <F5> :call qrun#()<cr>
-
+>
+    nmap <F5> :call qrun#({'run': 1})<cr>
+<
 Interface~
 
 - qrun#exec(option) 运行程序，可设置标准输入/输出

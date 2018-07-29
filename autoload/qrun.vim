@@ -6,6 +6,7 @@
 " =============================================================================
 
 let s:path = expand('<sfile>:p:h')
+let s:cadde = {j,d,e->vim#cadde(d)}
 
 " Run current file by the file-type {{{
 fun! qrun#(...)
@@ -21,11 +22,12 @@ fun! qrun#(...)
 
     try
         update
+        call extend(b:qrun, a:0 ? a:1 : {})
         let source = expand('%')
         let target = get(b:qrun, 'target')
         if !empty(target) && qrun#older(target, source)
             call qrun#{ft}#compile(source, target)
-        else
+        elseif get(b:qrun, 'run', 1)
             return qrun#{ft}#run()
         endif
     catch /E117/
@@ -40,24 +42,26 @@ endf " }}}
 
 " Compile with a command and run the target if success {{{
 fun! qrun#compile(cmd)
-    if exists('s:pid') && job#running(s:pid)
+    if exists('s:pid') && job#status(s:pid) == 'run'
         echom 'A task is running' | return
     endif
 
     let ft = &filetype
+    let cmd = a:cmd
     fun! OnExit(job, code, stream) closure
         if a:code
             bel copen 8 | winc p
-        else
+        elseif get(b:qrun, 'run', 1)
             call qrun#{ft}#run()
+            echom 'Build success:' cmd
         endif
     endf
 
     cexpr ''
     " let cmd = type(a:1)==v:t_list? a:1 : join(a:000)
-    let s:pid = job#start(a:cmd, {
-                \ 'on_stdout' : 'callback#caddexpr',
-                \ 'on_stderr' : 'callback#caddexpr',
+    let s:pid = job#start(cmd, {
+                \ 'on_stdout' : s:cadde,
+                \ 'on_stderr' : s:cadde,
                 \ 'on_exit': funcref('OnExit')
                 \ })
 endf " }}}
@@ -162,7 +166,7 @@ endf
 
 " Execute cmdline in built-in terminal {{{
 fun! qrun#texec(cmd)
-    call term#open(a:cmd, {'on_stderr': function('callback#caddexpr')})
+    call term#open(a:cmd, {'on_stderr': s:cadde})
 endf " }}}
 
 " Execute cmdline and redirect it's stderr to quickfix {{{
