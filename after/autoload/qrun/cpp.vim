@@ -39,20 +39,20 @@ endif " }}}
 
 " Check compiler {{{
 if has('win32') && executable('cl')
-    fun! s:compile(s, o)
+    fun! s:compile(s, o, args)
         let obj = fnamemodify(a:o, ':p:r')
         " return qrun#compile(['cl', a:s, '/Fe:', a:o, '/Fo:', obj, '/Fd:', obj, '/Zi'])
-        return qrun#compile(['cl', a:s, '/Fe:', a:o, '/Fo:', obj])
+        return qrun#compile(['cl', a:s, '/Fe:', a:o, '/Fo:', obj, a:args])
     endf
     compiler msvc
 elseif executable('g++')
-    fun! s:compile(s, o)
-        return qrun#compile(['g++', '-std=c++11', a:s, '-o', a:o])
+    fun! s:compile(s, o, args)
+        return qrun#compile(['g++', '-std=c++11', a:s, '-o', a:o, a:args])
     endf
     compiler gcc
 elseif executable('clang++')
-    fun! s:compile(s, o)
-        return qrun#compile(['clang++', '-std=c++11', a:s, '-o', a:o])
+    fun! s:compile(s, o, args)
+        return qrun#compile(['clang++', '-std=c++11', a:s, '-o', a:o, a:args])
     endf
     compiler gcc
 else
@@ -66,7 +66,7 @@ endf
 
 fun! qrun#cpp#compile(source, target)
     if exists('*s:compile')
-        return s:compile(a:source, a:target)
+        return s:compile(a:source, a:target, qrun#modeline())
     endif
     echom 'Can not found c++ compiler'
 endf
